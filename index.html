@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Matematika Kontekstual</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --success-bg: #d1fae5;
+            --success-text: #065f46;
+            --error: #ef4444;
+            --error-bg: #fee2e2;
+            --error-text: #991b1b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card);
+            width: 100%;
+            max-width: 650px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            max-height: 95vh;
+        }
+
+        .screen { display: none; padding: 30px; overflow-y: auto; }
+        .screen.active { display: block; animation: fadeIn 0.3s; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        h1, h2, h3 { color: var(--primary); margin-bottom: 15px; text-align: center; }
+        
+        /* Form & Input */
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+        input[type="text"], input[type="number"], select {
+            width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; transition: 0.2s;
+        }
+        input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+        .warning-box {
+            background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 0 8px 8px 0;
+            margin-bottom: 25px; font-size: 15px; color: #92400e; line-height: 1.5;
+        }
+
+        .btn {
+            background-color: var(--primary); color: white; border: none; padding: 14px 24px; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer; width: 100%; transition: 0.2s;
+        }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn:disabled { background-color: var(--text-muted); cursor: not-allowed; }
+        .btn-outline { background-color: transparent; color: var(--primary); border: 1px solid var(--primary); }
+
+        /* Quiz UI */
+        .quiz-header {
+            background-color: #eff6ff; padding: 15px 30px; border-bottom: 1px solid #bfdbfe; font-size: 14px; font-weight: 600;
+            display: flex; justify-content: space-between; position: sticky; top: 0; z-index: 10;
+        }
+        
+        .q-meta { color: var(--text-muted); font-size: 14px; font-weight: 600; margin-bottom: 15px; }
+        .q-text { font-size: 18px; font-weight: 500; margin-bottom: 25px; line-height: 1.6; }
+
+        .options-container { display: flex; flex-direction: column; gap: 12px; }
+        .option-btn {
+            display: flex; align-items: center; padding: 15px; border: 1px solid var(--border); border-radius: 8px;
+            background: white; cursor: pointer; transition: 0.2s; font-size: 16px; text-align: left;
+        }
+        .option-btn:hover:not(:disabled) { border-color: var(--primary); background-color: #f8fafc; }
+        .option-letter {
+            font-weight: bold; margin-right: 15px; background: var(--bg); padding: 5px 12px; border-radius: 6px; color: var(--text-muted);
+        }
+        
+        /* State Opsi setelah dijawab */
+        .option-btn:disabled { cursor: default; }
+        .option-btn.selected { border-color: var(--primary); background-color: #eff6ff; }
+        .option-btn.correct-ans { border-color: var(--success); background-color: var(--success-bg); }
+        .option-btn.correct-ans .option-letter { background: var(--success); color: white; }
+        .option-btn.wrong-ans { border-color: var(--error); background-color: var(--error-bg); }
+        .option-btn.wrong-ans .option-letter { background: var(--error); color: white; }
+
+        /* Feedback Box */
+        .feedback-box {
+            margin-top: 20px; padding: 15px; border-radius: 8px; font-size: 15px; line-height: 1.5; display: none; animation: fadeIn 0.3s;
+        }
+        .feedback-box.correct { background-color: var(--success-bg); color: var(--success-text); border: 1px solid #a7f3d0; }
+        .feedback-box.wrong { background-color: var(--error-bg); color: var(--error-text); border: 1px solid #fecaca; }
+        .feedback-title { font-weight: 700; margin-bottom: 5px; font-size: 16px; }
+
+        .error-msg { color: var(--error); font-size: 14px; margin-top: 5px; display: none; text-align: center; }
+
+        /* Result Screen */
+        .score-circle {
+            width: 120px; height: 120px; border-radius: 50%; background: var(--primary); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 auto 20px;
+        }
+        .score-circle .val { font-size: 40px; font-weight: 700; line-height: 1; }
+        
+        .student-details { background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 25px; font-size: 15px; }
+        .student-details span { font-weight: 600; }
+
+        .analysis-container { margin-bottom: 25px; }
+        .analysis-card { background: white; border: 1px solid var(--border); padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .analysis-card h4 { color: var(--primary); margin-bottom: 5px; font-size: 15px; }
+        .analysis-stats { font-size: 14px; color: var(--text-muted); margin-bottom: 5px; }
+        .analysis-msg { font-size: 14px; font-weight: 500; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- HALAMAN AWAL -->
+    <div id="screen-welcome" class="screen active">
+        <h1>Kuis Matematika Kontekstual</h1>
+        
+        <div class="warning-box">
+            <strong>PERHATIAN:</strong><br>
+            Tuliskan soal dan kerjakan menggunakan cara di buku tugas Anda! Aplikasi ini hanya digunakan untuk mengumpulkan hasil akhir dan melihat pembahasan.
+        </div>
+
+        <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input type="text" id="inp-nama" placeholder="Masukkan nama Anda">
+        </div>
+        <div class="form-group">
+            <label>Kelas</label>
+            <select id="inp-kelas">
+                <option value="" disabled selected>-- Pilih Kelas --</option>
+                <option value="XI A">XI A</option>
+                <option value="XI B">XI B</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Nomor Absen</label>
+            <input type="number" id="inp-no" placeholder="Contoh: 12" min="1">
+        </div>
+
+        <div id="welcome-error" class="error-msg">Harap lengkapi Nama, Kelas, dan Nomor Absen!</div>
+        
+        <button class="btn" onclick="startQuiz()" style="margin-top:15px;">Mulai Kuis</button>
+    </div>
+
+    <!-- HALAMAN KUIS -->
+    <div id="screen-quiz" style="display:none; height: 100%; display: flex; flex-direction: column;">
+        <div class="quiz-header">
+            <span id="hdr-identitas"></span>
+            <span id="hdr-progress"></span>
+        </div>
+
+        <div class="screen active" style="flex: 1;">
+            <div class="q-meta"><span id="q-topic"></span></div>
+            <div id="q-text" class="q-text"></div>
+            
+            <div id="q-options" class="options-container"></div>
+
+            <div id="feedback-container" class="feedback-box">
+                <div id="feedback-title" class="feedback-title"></div>
+                <div id="feedback-desc"></div>
+            </div>
+
+            <button id="btn-next" class="btn" onclick="nextQuestion()" style="margin-top: 25px; display: none;">Soal Selanjutnya</button>
+        </div>
+    </div>
+
+    <!-- HALAMAN HASIL -->
+    <div id="screen-result" class="screen">
+        <h2>Ujian Selesai!</h2>
+        
+        <div class="score-circle">
+            <span style="font-size: 13px; margin-bottom: 5px;">Nilai Akhir</span>
+            <span class="val" id="res-score">0</span>
+        </div>
+
+        <div class="student-details">
+            <p>Nama: <span id="res-nama">-</span></p>
+            <p>Kelas: <span id="res-kelas">-</span></p>
+            <p>No Absen: <span id="res-no">-</span></p>
+        </div>
+
+        <h3>Hasil Analisis Jawaban Murid</h3>
+        <div id="analysis-list" class="analysis-container">
+            <!-- Analisis per topik akan dimuat di sini -->
+        </div>
+
+        <button class="btn btn-outline" onclick="location.reload()">Selesai / Kembali ke Awal</button>
+    </div>
+
+</div>
+
+<script>
+    // DATA 25 SOAL
+    const questions = [
+        // Polinomial
+        { topic: "Polinomial", text: "Pabrik kemasan membuat kotak dengan volume V(x) = x³ - 4x² + 5x (cm³). Jika lebar kotak x = 2 cm, volume kotak adalah...", options: { A: "2", B: "4", C: "8", D: "10", E: "12" }, correct: "A", explanation: "V(2) = 2³ - 4(2²) + 5(2) = 8 - 16 + 10 = 2 cm³." },
+        { topic: "Polinomial", text: "Laba produk per bulan dinyatakan P(x) = 2x³ - 5x² + 3x + 10 (juta rupiah), x adalah bulan. Laba pada bulan ke-3 adalah...", options: { A: "10", B: "28", C: "30", D: "42", E: "54" }, correct: "B", explanation: "P(3) = 2(3³) - 5(3²) + 3(3) + 10 = 2(27) - 5(9) + 9 + 10 = 54 - 45 + 19 = 28 juta rupiah." },
+        { topic: "Polinomial", text: "Biaya operasional mesin C(x) = x³ - 2x² + 10 (ribu rupiah), x adalah jam pemakaian. Jika dipakai 4 jam, biayanya...", options: { A: "10", B: "24", C: "32", D: "42", E: "64" }, correct: "D", explanation: "C(4) = 4³ - 2(4²) + 10 = 64 - 32 + 10 = 42 ribu rupiah." },
+        
+        // Matriks
+        { topic: "Matriks", text: "Penjualan tiket dilambangkan matriks [150 50; 200 80]. Determinan matriks ini adalah...", options: { A: "-2000", B: "-1000", C: "1000", D: "2000", E: "12000" }, correct: "D", explanation: "Determinan = (150 × 80) - (50 × 200) = 12000 - 10000 = 2000." },
+        { topic: "Matriks", text: "Matriks sandi B = [5 2; 7 3]. Elemen baris 1 kolom 1 matriks inversnya adalah...", options: { A: "3", B: "-2", C: "-7", D: "5", E: "1" }, correct: "A", explanation: "Det = (5×3)-(2×7) = 1. Invers = (1/1) × [3 -2; -7 5]. Elemen baris 1 kolom 1 adalah 3." },
+        { topic: "Matriks", text: "Data pupuk C = [2 1 0; 1 3 1; 0 2 2]. Determinan matriks C ini adalah...", options: { A: "2", B: "4", C: "6", D: "8", E: "10" }, correct: "C", explanation: "Gunakan ekspansi baris 1: 2((3×2)-(1×2)) - 1((1×2)-(1×0)) + 0 = 2(6-2) - 1(2-0) = 2(4) - 2 = 6." },
+        { topic: "Matriks", text: "Logistik D = [1 0 2; 0 2 1; 3 0 4]. Nilai determinannya adalah...", options: { A: "-6", B: "-4", C: "0", D: "4", E: "6" }, correct: "B", explanation: "Ekspansi kolom 2 (hanya ada elemen 2 di tengah): 2 × (-1)^(2+2) × det([1 2; 3 4]) = 2 × 1 × ((1×4)-(2×3)) = 2 × (4-6) = 2 × (-2) = -4." },
+        
+        // Transformasi Geometri
+        { topic: "Transformasi Geometri", text: "Air mancur di titik (4, 2) diputar 90 derajat berlawanan jarum jam. Koordinat barunya adalah...", options: { A: "(2,4)", B: "(2,-4)", C: "(-2,4)", D: "(-4,-2)", E: "(-4,2)" }, correct: "C", explanation: "Rotasi 90° berlawanan arah jarum jam mengubah titik (x,y) menjadi (-y,x). Jadi, (4,2) menjadi (-2,4)." },
+        { topic: "Transformasi Geometri", text: "Drone pemetaan di posisi (5, -3) direfleksikan terhadap sumbu Y. Koordinat barunya adalah...", options: { A: "(5,3)", B: "(-5,-3)", C: "(-5,3)", D: "(-3,5)", E: "(3,-5)" }, correct: "B", explanation: "Refleksi terhadap sumbu Y merubah tanda x (x,y) menjadi (-x,y). Jadi, (5,-3) menjadi (-5,-3)." },
+        { topic: "Transformasi Geometri", text: "Sebuah logo di titik (2, 5) didilatasi dengan faktor 3 dari pusat (0,0). Koordinat barunya adalah...", options: { A: "(2,15)", B: "(6,5)", C: "(6,15)", D: "(5,8)", E: "(15,6)" }, correct: "C", explanation: "Dilatasi dari pusat (0,0) dengan faktor k mengalikan tiap koordinat dengan k. 3 × (2,5) = (6,15)." },
+
+        // Fungsi Rasional
+        { topic: "Fungsi Rasional", text: "Waktu bersih gedung W(x) = 120 / (x + 2) jam. Jika dikerjakan oleh 8 pekerja (x=8), waktunya adalah...", options: { A: "8", B: "10", C: "12", D: "14", E: "15" }, correct: "C", explanation: "W(8) = 120 / (8 + 2) = 120 / 10 = 12 jam." },
+        { topic: "Fungsi Rasional", text: "Konsentrasi obat C(t) = 5t / (t² + 1) mg/L. Pada waktu 2 jam, konsentrasinya adalah...", options: { A: "1", B: "1.5", C: "2", D: "2.5", E: "3" }, correct: "C", explanation: "C(2) = 5(2) / (2² + 1) = 10 / (4 + 1) = 10 / 5 = 2 mg/L." },
+        { topic: "Fungsi Rasional", text: "Biaya unit B(x) = (3x + 15) / x (puluh ribu rupiah). Untuk x = 5 ratus pasang. Biaya rata-ratanya adalah...", options: { A: "3", B: "5", C: "6", D: "8", E: "15" }, correct: "C", explanation: "B(5) = (3(5) + 15) / 5 = (15 + 15) / 5 = 30 / 5 = 6 puluh ribu rupiah." },
+
+        // Fungsi Akar
+        { topic: "Fungsi Akar", text: "Kecepatan air v(h) = √20h. Untuk tinggi h = 5 meter, kecepatannya adalah...", options: { A: "5", B: "10", C: "15", D: "20", E: "100" }, correct: "B", explanation: "v(5) = √(20 × 5) = √100 = 10." },
+        { topic: "Fungsi Akar", text: "Jarak pandang dari menara d(h) = 3√h. Untuk tinggi menara 16 meter. Jarak pandangnya adalah...", options: { A: "9", B: "12", C: "16", D: "24", E: "48" }, correct: "B", explanation: "d(16) = 3 × √16 = 3 × 4 = 12." },
+        { topic: "Fungsi Akar", text: "Kecepatan gelombang tsunami v = 3√d. Pada kedalaman laut 25 meter. Kecepatannya adalah...", options: { A: "9", B: "12", C: "15", D: "25", E: "75" }, correct: "C", explanation: "v = 3 × √25 = 3 × 5 = 15." },
+
+        // Fungsi Mutlak
+        { topic: "Fungsi Mutlak", text: "Mesin penetas telur memiliki simpangan f(T) = |T - 38|. Jika suhu aktual 35 derajat, simpangannya adalah...", options: { A: "-3", B: "0", C: "3", D: "35", E: "73" }, correct: "C", explanation: "f(35) = |35 - 38| = |-3| = 3 derajat." },
+        { topic: "Fungsi Mutlak", text: "Toleransi ketebalan plat baja adalah |x - 5| mm. Jika tebal terukur 5.4 mm, maka nilai toleransinya adalah...", options: { A: "-0.4", B: "0.4", C: "4", D: "5.4", E: "10.4" }, correct: "B", explanation: "Toleransi = |5.4 - 5| = |0.4| = 0.4 mm." },
+        { topic: "Fungsi Mutlak", text: "Jarak drone terhadap titik awal d(x) = |2x - 10|. Pada menit ke-2 (x=2), jaraknya adalah...", options: { A: "-6", B: "0", C: "4", D: "6", E: "14" }, correct: "D", explanation: "d(2) = |2(2) - 10| = |4 - 10| = |-6| = 6 meter." },
+
+        // Fungsi Tangga
+        { topic: "Fungsi Tangga", text: "Tarif parkir f(x) = 5000 × (pembulatan ke atas dari x jam). Jika parkir 2.5 jam, biayanya adalah...", options: { A: "10000", B: "12500", C: "15000", D: "17500", E: "20000" }, correct: "C", explanation: "Pembulatan ke atas dari 2.5 adalah 3 jam. Biaya = 3 × 5000 = 15000." },
+        { topic: "Fungsi Tangga", text: "Tarif kargo f(x) = 15000 × (pembulatan ke atas dari berat x kg). Jika berat 4.3 kg, biayanya adalah...", options: { A: "45000", B: "60000", C: "64500", D: "75000", E: "90000" }, correct: "D", explanation: "Pembulatan ke atas dari 4.3 adalah 5 kg. Biaya = 5 × 15000 = 75000." },
+        { topic: "Fungsi Tangga", text: "Bonus karyawan f(x) = 500000 × (pembulatan ke bawah (x/10)). Jika terjual 37 unit, bonusnya adalah...", options: { A: "1000000", B: "1500000", C: "1850000", D: "2000000", E: "3500000" }, correct: "B", explanation: "x/10 = 37/10 = 3.7. Dibulatkan ke bawah menjadi 3. Bonus = 3 × 500000 = 1500000." },
+
+        // Trigonometri
+        { topic: "Trigonometri", text: "Sebuah gedung terlihat dengan sudut elevasi 45°. Jika panjang bayangannya 20m, maka tinggi gedung adalah...", options: { A: "10", B: "20", C: "20√2", D: "40", E: "45" }, correct: "B", explanation: "Tinggi = jarak × tan(45°) = 20 × 1 = 20 meter." },
+        { topic: "Trigonometri", text: "Sebuah tangga bersandar pada tembok membentuk sudut 60° dengan tanah. Jika jarak ujung bawah tangga ke tembok 3m, panjang tangga adalah...", options: { A: "3", B: "3√3", C: "6", D: "6√3", E: "9" }, correct: "C", explanation: "Gunakan cos(60°) = samping / miring. 1/2 = 3 / Panjang. Panjang = 3 × 2 = 6 meter." },
+        { topic: "Trigonometri", text: "Dari atas mercusuar setinggi 40m, seorang pengamat melihat perahu dengan sudut depresi 30°. Jarak perahu ke mercusuar adalah...", options: { A: "40", B: "40√2", C: "40√3", D: "80", E: "120" }, correct: "C", explanation: "Jarak = tinggi / tan(30°) = 40 / (1/√3) = 40√3 meter." }
+    ];
+
+    let currentQIndex = 0;
+    let student = { nama: '', kelas: '', no: '' };
+    let correctCount = 0;
+    
+    // Untuk analisis topik
+    let topicAnalysis = {};
+
+    function startQuiz() {
+        const nm = document.getElementById('inp-nama').value.trim();
+        const kl = document.getElementById('inp-kelas').value;
+        const no = document.getElementById('inp-no').value;
+
+        if(!nm || !kl || !no) {
+            document.getElementById('welcome-error').style.display = 'block';
+            return;
+        }
+
+        student = { nama: nm, kelas: kl, no: no };
+        document.getElementById('hdr-identitas').innerText = `${kl} - ${nm} (${no})`;
+
+        // Inisialisasi object analysis per topik
+        questions.forEach(q => {
+            if(!topicAnalysis[q.topic]) {
+                topicAnalysis[q.topic] = { total: 0, correct: 0 };
+            }
+            topicAnalysis[q.topic].total++;
+        });
+
+        document.getElementById('screen-welcome').classList.remove('active');
+        document.getElementById('screen-quiz').style.display = 'flex';
+        renderQuestion();
+    }
+
+    function renderQuestion() {
+        const q = questions[currentQIndex];
+        
+        document.getElementById('hdr-progress').innerText = `Soal ${currentQIndex + 1} / ${questions.length}`;
+        document.getElementById('q-topic').innerText = `Materi: ${q.topic}`;
+        document.getElementById('q-text').innerText = q.text;
+
+        const optionsContainer = document.getElementById('q-options');
+        optionsContainer.innerHTML = '';
+        
+        const letters = ['A', 'B', 'C', 'D', 'E'];
+        
+        letters.forEach(letter => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerHTML = `<span class="option-letter">${letter}</span> <span>${q.options[letter]}</span>`;
+            btn.onclick = () => selectOption(letter, btn);
+            optionsContainer.appendChild(btn);
+        });
+
+        // Sembunyikan state sebelumnya
+        document.getElementById('feedback-container').style.display = 'none';
+        document.getElementById('btn-next').style.display = 'none';
+    }
+
+    function selectOption(selectedLetter, btnElement) {
+        const q = questions[currentQIndex];
+        const isCorrect = (selectedLetter === q.correct);
+        
+        // Disable semua tombol agar hanya bisa pilih 1 kali
+        const allBtns = document.querySelectorAll('.option-btn');
+        allBtns.forEach(btn => btn.disabled = true);
+
+        const feedbackBox = document.getElementById('feedback-container');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackDesc = document.getElementById('feedback-desc');
+
+        if (isCorrect) {
+            btnElement.classList.add('correct-ans');
+            feedbackBox.className = 'feedback-box correct';
+            feedbackTitle.innerText = 'Benar!';
+            feedbackDesc.innerText = q.explanation;
+            correctCount++;
+            topicAnalysis[q.topic].correct++;
+        } else {
+            btnElement.classList.add('wrong-ans');
+            // Tandai yang benar
+            const correctIndex = ['A','B','C','D','E'].indexOf(q.correct);
+            allBtns[correctIndex].classList.add('correct-ans');
+
+            feedbackBox.className = 'feedback-box wrong';
+            feedbackTitle.innerText = `Salah! Jawaban yang tepat adalah ${q.correct}.`;
+            feedbackDesc.innerText = q.explanation;
+        }
+
+        feedbackBox.style.display = 'block';
+
+        const btnNext = document.getElementById('btn-next');
+        btnNext.style.display = 'block';
+        if (currentQIndex === questions.length - 1) {
+            btnNext.innerText = 'Lihat Hasil Akhir';
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQIndex < questions.length - 1) {
+            currentQIndex++;
+            renderQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('screen-quiz').style.display = 'none';
+        document.getElementById('screen-result').classList.add('active');
+
+        // Hitung nilai (4 point per soal x 25 = 100)
+        const finalScore = correctCount * 4; 
+        document.getElementById('res-score').innerText = finalScore;
+        document.getElementById('res-nama').innerText = student.nama;
+        document.getElementById('res-kelas').innerText = student.kelas;
+        document.getElementById('res-no').innerText = student.no;
+
+        // Render Analisis
+        const analysisList = document.getElementById('analysis-list');
+        analysisList.innerHTML = '';
+
+        for (const [topic, data] of Object.entries(topicAnalysis)) {
+            const perc = data.correct / data.total;
+            let msg = "";
+            let msgColor = "";
+
+            if (perc === 1) {
+                msg = "Sempurna! Pertahankan pemahaman Anda.";
+                msgColor = "var(--success)";
+            } else if (perc >= 0.5) {
+                msg = "Cukup baik, tapi pastikan kembali teliti dalam berhitung.";
+                msgColor = "#ca8a04"; // yellow-dark
+            } else {
+                msg = "Masih kurang. Silakan pelajari ulang materi dan rumus ini.";
+                msgColor = "var(--error)";
+            }
+
+            const card = document.createElement('div');
+            card.className = 'analysis-card';
+            card.innerHTML = `
+                <h4>${topic}</h4>
+                <div class="analysis-stats">Benar: ${data.correct} dari ${data.total} soal</div>
+                <div class="analysis-msg" style="color: ${msgColor}">${msg}</div>
+            `;
+            analysisList.appendChild(card);
+        }
+    }
+</script>
+
+</body>
+</html>
